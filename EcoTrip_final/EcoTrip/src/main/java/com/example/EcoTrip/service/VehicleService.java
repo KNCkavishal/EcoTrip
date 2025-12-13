@@ -6,6 +6,8 @@ import com.example.EcoTrip.model.Vehicle;
 import java.util.List;
 
 public interface VehicleService {
-    Vehicle registerVehicle(VehicleRequest request);
+
+    Vehicle registerVehicle(VehicleRequest request, String userId);
+
     List<Vehicle> getUserVehicles(String userId);
 }

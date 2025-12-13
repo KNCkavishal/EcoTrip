@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import axios from "axios";
 import { jsPDF } from "jspdf";
 
 export default function FamilyTripPage() {
@@ -15,15 +16,21 @@ export default function FamilyTripPage() {
   });
 
   const [result, setResult] = useState(null);
+  const [message, setMessage] = useState("");
+
+  const API_URL = "http://localhost:8081/api/trips/family";
+  const token = localStorage.getItem("jwt");
 
   const handleChange = (e) => {
     setTrip({ ...trip, [e.target.name]: e.target.value });
   };
 
-  const calculateTrip = (e) => {
+  // 🔹 Calculate + Save Trip
+  const calculateTrip = async (e) => {
     e.preventDefault();
 
-    const distance = parseFloat(trip.distance) || 0;
+    // Parse inputs
+    const distanceKm = parseFloat(trip.distance) || 0;
     const fuelPrice = parseFloat(trip.fuelPrice) || 0;
     const fuelConsumption = parseFloat(trip.fuelConsumption) || 0;
     const tyreCost = parseFloat(trip.tyreCost) || 0;
@@ -31,33 +38,69 @@ export default function FamilyTripPage() {
     const driverSalary = parseFloat(trip.driverSalary) || 0;
     const foodCost = parseFloat(trip.foodCost) || 0;
     const stayCost = parseFloat(trip.stayCost) || 0;
-    const co2Factor = parseFloat(trip.co2Factor);
+    const co2Factor = parseFloat(trip.co2Factor) || 0;
 
-    const fuelUsed = (distance / 100) * fuelConsumption;
+    // 🔹 Calculations
+    const fuelUsed = (distanceKm / 100) * fuelConsumption;
     const fuelTotal = fuelUsed * fuelPrice;
+    const tyreUsage = (distanceKm / 20000) * tyreCost;
+    const serviceUsage = (distanceKm / 10000) * serviceCost;
 
-    const tyreUsage = (distance / 20000) * tyreCost;
-    const serviceUsage = (distance / 10000) * serviceCost;
+    const totalCost =
+      fuelTotal +
+      tyreUsage +
+      serviceUsage +
+      driverSalary +
+      foodCost +
+      stayCost;
 
-    const totalCost = fuelTotal + tyreUsage + serviceUsage + driverSalary + foodCost + stayCost;
+    const co2Emission = distanceKm * co2Factor;
 
-    const co2Emission = distance * co2Factor;
+    const payload = {
+      distanceKm,
+      fuelCostPerKm: fuelPrice / fuelConsumption,
+      serviceCost: serviceUsage,
+      tyreCost: tyreUsage,
+      co2PerKm: co2Factor
+    };
 
-    setResult({
-      fuelTotal,
-      tyreUsage,
-      serviceUsage,
-      totalCost,
-      co2Emission
-    });
+    try {
+      // 🔹 Save to database
+      const res = await axios.post(API_URL, payload, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // Save parsed input values + results in state
+      setResult({
+        distanceKm,
+        fuelPrice,
+        fuelConsumption,
+        tyreCost,
+        serviceCost,
+        driverSalary,
+        foodCost,
+        stayCost,
+        co2Factor,
+        fuelTotal,
+        tyreUsage,
+        serviceUsage,
+        totalCost,
+        co2Emission,
+        dbTrip: res.data
+      });
+
+      setMessage("Trip saved successfully ✔");
+    } catch (err) {
+      console.error(err);
+      setMessage("Error saving trip ❌");
+    }
   };
 
-  // 🔹 Generate multi-page PDF
+  // 🔹 Generate PDF
   const generatePDF = () => {
     if (!result) return;
 
     const doc = new jsPDF();
-    const pageHeight = doc.internal.pageSize.height;
     let y = 10;
 
     doc.setFontSize(18);
@@ -66,28 +109,25 @@ export default function FamilyTripPage() {
 
     doc.setFontSize(12);
     const lines = [
-      `Distance: ${trip.distance} KM`,
-      `Fuel Price: Rs ${trip.fuelPrice} per liter`,
-      `Fuel Consumption: ${trip.fuelConsumption} L/100km`,
-      `Tyre Cost: Rs ${trip.tyreCost}`,
-      `Service Cost: Rs ${trip.serviceCost}`,
-      `Driver Salary: Rs ${trip.driverSalary}`,
-      `Food Cost: Rs ${trip.foodCost}`,
-      `Accommodation Cost: Rs ${trip.stayCost}`,
-      `Estimated CO₂ Factor: ${trip.co2Factor} kg/km`,
-      "",
+      `Distance: ${result.distanceKm} KM`,
+      `Fuel Price: Rs ${result.fuelPrice.toFixed(2)}`,
+      `Fuel Consumption: ${result.fuelConsumption} L/100KM`,
+      `Tyre Cost: Rs ${result.tyreCost.toFixed(2)}`,
+      `Service Cost: Rs ${result.serviceCost.toFixed(2)}`,
+      `Driver Salary: Rs ${result.driverSalary.toFixed(2)}`,
+      `Food Cost: Rs ${result.foodCost.toFixed(2)}`,
+      `Stay Cost: Rs ${result.stayCost.toFixed(2)}`,
+      `CO₂ Factor: ${result.co2Factor.toFixed(2)} kg/km`,
+      ``,
+      `--- Calculated Results ---`,
       `Fuel Cost: Rs ${result.fuelTotal.toFixed(2)}`,
-      `Tyre Usage Cost: Rs ${result.tyreUsage.toFixed(2)}`,
-      `Service Usage Cost: Rs ${result.serviceUsage.toFixed(2)}`,
+      `Tyre Cost Usage: Rs ${result.tyreUsage.toFixed(2)}`,
+      `Service Cost Usage: Rs ${result.serviceUsage.toFixed(2)}`,
       `Total Trip Cost: Rs ${result.totalCost.toFixed(2)}`,
-      `Estimated CO₂ Emission: ${result.co2Emission.toFixed(2)} kg`
+      `CO₂ Emission: ${result.co2Emission.toFixed(2)} kg`
     ];
 
     lines.forEach((line) => {
-      if (y > pageHeight - 20) { // create new page if overflow
-        doc.addPage();
-        y = 10;
-      }
       doc.text(line, 10, y);
       y += 10;
     });
@@ -96,30 +136,28 @@ export default function FamilyTripPage() {
   };
 
   return (
-    <div style={{ padding: "20px", maxWidth: "600px", margin: "0 auto" }}>
-      <h1>Family Trip Cost Calculator</h1>
+    <div style={{ maxWidth: "600px", margin: "auto", padding: "20px" }}>
+      <h2>Family Trip Cost Calculator</h2>
 
       <form onSubmit={calculateTrip}>
         <input name="distance" placeholder="Distance (KM)" onChange={handleChange} /><br /><br />
         <input name="fuelPrice" placeholder="Fuel Price (per liter)" onChange={handleChange} /><br /><br />
         <input name="fuelConsumption" placeholder="Fuel Consumption (L/100km)" onChange={handleChange} /><br /><br />
-        <input name="tyreCost" placeholder="Estimated Tyre Cost (Rs)" onChange={handleChange} /><br /><br />
-        <input name="serviceCost" placeholder="Estimated Service Cost (Rs)" onChange={handleChange} /><br /><br />
+        <input name="tyreCost" placeholder="Tyre Cost (Rs)" onChange={handleChange} /><br /><br />
+        <input name="serviceCost" placeholder="Service Cost (Rs)" onChange={handleChange} /><br /><br />
         <input name="driverSalary" placeholder="Driver Salary (Rs)" onChange={handleChange} /><br /><br />
         <input name="foodCost" placeholder="Food Cost (Rs)" onChange={handleChange} /><br /><br />
         <input name="stayCost" placeholder="Accommodation Cost (Rs)" onChange={handleChange} /><br /><br />
-
-        <button type="submit">Calculate Trip Cost</button>
+        <button type="submit">Calculate & Save Trip</button>
       </form>
 
+      {message && <p>{message}</p>}
+
       {result && (
-        <div style={{ marginTop: "30px" }}>
-          <h2>Trip Summary</h2>
-          <p>Fuel Cost: Rs {result.fuelTotal.toFixed(2)}</p>
-          <p>Tyre Usage Cost: Rs {result.tyreUsage.toFixed(2)}</p>
-          <p>Service Usage Cost: Rs {result.serviceUsage.toFixed(2)}</p>
-          <p>Total Trip Cost: Rs {result.totalCost.toFixed(2)}</p>
-          <p>Estimated CO₂ Emission: {result.co2Emission.toFixed(2)} kg</p>
+        <div style={{ marginTop: "20px" }}>
+          <h3>Trip Summary</h3>
+          <p>Total Cost: Rs {result.totalCost.toFixed(2)}</p>
+          <p>CO₂ Emission: {result.co2Emission.toFixed(2)} kg</p>
           <button onClick={generatePDF}>Download PDF</button>
         </div>
       )}

@@ -10,11 +10,17 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Builder
 @Document(collection = "vehicles")
 public class Vehicle {
+
     @Id
     private String id;
-    private String userId;          // auto-filled from JWT
-    private String numberPlate;     // essential
-    private String vehicleType;     // car, bus, etc.
-    private Double fuelEfficiency;  // optional
-    private Double co2PerKm;        // optional
+
+    private String userId;          // from JWT
+    private String number;          // vehicle number
+    private String province;        // province
+    private Integer yearMake;       // year of manufacture
+    private Integer yearRegister;   // year of registration
+    private String vehicleType;     // Car / Bus
+
+    private Double fuelEfficiency;  // km per litre (optional)
+    private Double co2PerKm;        // kg per km (optional)
 }

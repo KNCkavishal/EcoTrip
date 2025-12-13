@@ -11,6 +11,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/vehicles")
+@CrossOrigin(origins = "http://localhost:3000")
 public class VehicleController {
 
     private final VehicleService vehicleService;
@@ -21,19 +22,24 @@ public class VehicleController {
 
     @PostMapping("/register")
     public ResponseEntity<Vehicle> registerVehicle(@RequestBody VehicleRequest request) {
-        String userId = getCurrentUserId();
-        Vehicle vehicle = vehicleService.registerVehicle(request);
-        vehicle.setUserId(userId); // attach logged-in user
-        return ResponseEntity.ok(vehicleService.registerVehicle(request));
+
+        String userId = (String) SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getPrincipal();
+
+        Vehicle saved = vehicleService.registerVehicle(request, userId);
+        return ResponseEntity.ok(saved);
     }
 
     @GetMapping("/myvehicles")
     public ResponseEntity<List<Vehicle>> getMyVehicles() {
-        String userId = getCurrentUserId();
-        return ResponseEntity.ok(vehicleService.getUserVehicles(userId));
-    }
 
-    private String getCurrentUserId() {
-        return (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        String userId = (String) SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getPrincipal();
+
+        return ResponseEntity.ok(vehicleService.getUserVehicles(userId));
     }
 }
