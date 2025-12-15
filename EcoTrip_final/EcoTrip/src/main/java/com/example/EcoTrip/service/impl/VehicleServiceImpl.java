@@ -18,13 +18,19 @@ public class VehicleServiceImpl implements VehicleService {
     }
 
     @Override
-    public Vehicle registerVehicle(VehicleRequest request) {
+    public Vehicle registerVehicle(VehicleRequest request, String userId) {
+
         Vehicle vehicle = Vehicle.builder()
-                .numberPlate(request.getNumberPlate())
+                .userId(userId)
+                .number(request.getNumber())
+                .province(request.getProvince())
+                .yearMake(request.getYearMake())
+                .yearRegister(request.getYearRegister())
                 .vehicleType(request.getVehicleType())
                 .fuelEfficiency(request.getFuelEfficiency())
                 .co2PerKm(request.getCo2PerKm())
                 .build();
+
         return vehicleRepository.save(vehicle);
     }
 

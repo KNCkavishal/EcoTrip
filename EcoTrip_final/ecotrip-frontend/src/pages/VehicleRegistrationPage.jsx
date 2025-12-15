@@ -1,11 +1,21 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 export default function VehicleRegistrationPage() {
-  const [numberPlate, setNumberPlate] = useState("");
-  const [vehicleType, setVehicleType] = useState("");
-  const [fuelEfficiency, setFuelEfficiency] = useState("");
-  const [co2PerKm, setCo2PerKm] = useState("");
+
+  const navigate = useNavigate();
+
+  const [vehicle, setVehicle] = useState({
+    number: "",
+    province: "",
+    yearMake: "",
+    yearRegister: "",
+    vehicleType: "",
+    fuelEfficiency: "",
+    co2PerKm: ""
+  });
+
   const [vehicles, setVehicles] = useState([]);
   const [message, setMessage] = useState("");
 
@@ -13,8 +23,17 @@ export default function VehicleRegistrationPage() {
   const API_URL = "http://localhost:8081/api/vehicles";
 
   useEffect(() => {
-    if (token) fetchVehicles();
+    if (token) {
+      fetchVehicles();
+    }
   }, []);
+
+  const handleChange = (e) => {
+    setVehicle({
+      ...vehicle,
+      [e.target.name]: e.target.value
+    });
+  };
 
   const fetchVehicles = async () => {
     try {
@@ -23,7 +42,7 @@ export default function VehicleRegistrationPage() {
       });
       setVehicles(res.data);
     } catch (err) {
-      console.error(err);
+      console.error("Fetch vehicles error", err);
     }
   };
 
@@ -32,46 +51,131 @@ export default function VehicleRegistrationPage() {
     setMessage("");
 
     try {
-      const res = await axios.post(`${API_URL}/register`, {
-        numberPlate,
-        vehicleType,
-        fuelEfficiency: fuelEfficiency ? parseFloat(fuelEfficiency) : undefined,
-        co2PerKm: co2PerKm ? parseFloat(co2PerKm) : undefined
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
+      await axios.post(
+        `${API_URL}/register`,
+        {
+          ...vehicle,
+          yearMake: Number(vehicle.yearMake),
+          yearRegister: Number(vehicle.yearRegister),
+          fuelEfficiency: vehicle.fuelEfficiency ? Number(vehicle.fuelEfficiency) : null,
+          co2PerKm: vehicle.co2PerKm ? Number(vehicle.co2PerKm) : null
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      setMessage("✅ Vehicle registered successfully!");
+
+      setVehicle({
+        number: "",
+        province: "",
+        yearMake: "",
+        yearRegister: "",
+        vehicleType: "",
+        fuelEfficiency: "",
+        co2PerKm: ""
       });
 
-      setMessage("Vehicle registered successfully!");
-      setNumberPlate("");
-      setVehicleType("");
-      setFuelEfficiency("");
-      setCo2PerKm("");
-      fetchVehicles(); // refresh list
+      fetchVehicles();
     } catch (err) {
-      setMessage(err.response?.data || "Error registering vehicle");
+      console.error(err);
+      setMessage("❌ Error registering vehicle");
     }
   };
 
   return (
-    <div style={{ textAlign: "center", marginTop: "50px" }}>
+    <div style={{ maxWidth: "500px", margin: "50px auto", textAlign: "center" }}>
       <h2>Vehicle Registration</h2>
+
       <form onSubmit={handleRegister}>
-        <input type="text" placeholder="Number Plate" value={numberPlate} onChange={(e) => setNumberPlate(e.target.value)} required /><br /><br />
-        <input type="text" placeholder="Vehicle Type" value={vehicleType} onChange={(e) => setVehicleType(e.target.value)} required /><br /><br />
-        <input type="number" step="0.1" placeholder="Fuel Efficiency (optional)" value={fuelEfficiency} onChange={(e) => setFuelEfficiency(e.target.value)} /><br /><br />
-        <input type="number" step="0.01" placeholder="CO2 per km (optional)" value={co2PerKm} onChange={(e) => setCo2PerKm(e.target.value)} /><br /><br />
+
+        <input
+          name="number"
+          placeholder="Vehicle Number"
+          value={vehicle.number}
+          onChange={handleChange}
+          required
+        /><br /><br />
+
+        <input
+          name="province"
+          placeholder="Province"
+          value={vehicle.province}
+          onChange={handleChange}
+          required
+        /><br /><br />
+
+        <input
+          type="number"
+          name="yearMake"
+          placeholder="Year of Manufacture"
+          value={vehicle.yearMake}
+          onChange={handleChange}
+          required
+        /><br /><br />
+
+        <input
+          type="number"
+          name="yearRegister"
+          placeholder="Year of Registration"
+          value={vehicle.yearRegister}
+          onChange={handleChange}
+          required
+        /><br /><br />
+
+        <input
+          name="vehicleType"
+          placeholder="Vehicle Type (Car / Bus)"
+          value={vehicle.vehicleType}
+          onChange={handleChange}
+          required
+        /><br /><br />
+
+        <input
+          type="number"
+          step="0.1"
+          name="fuelEfficiency"
+          placeholder="Fuel Efficiency (km/l)"
+          value={vehicle.fuelEfficiency}
+          onChange={handleChange}
+        /><br /><br />
+
+        <input
+          type="number"
+          step="0.01"
+          name="co2PerKm"
+          placeholder="CO₂ per km"
+          value={vehicle.co2PerKm}
+          onChange={handleChange}
+        /><br /><br />
+
         <button type="submit">Register Vehicle</button>
       </form>
-      {message && <p style={{ color: "green" }}>{message}</p>}
+
+      {message && <p>{message}</p>}
+
+      <hr />
 
       <h3>Your Vehicles</h3>
-      <ul>
+      <ul style={{ textAlign: "left" }}>
         {vehicles.map((v) => (
           <li key={v.id}>
-            {v.numberPlate} - {v.vehicleType} {v.fuelEfficiency && `- ${v.fuelEfficiency} km/l`} {v.co2PerKm && `- ${v.co2PerKm} kg/km`}
+            <strong>{v.number}</strong> ({v.vehicleType}) – {v.province}  
+            <br />
+            Year: {v.yearMake} | Registered: {v.yearRegister}
           </li>
         ))}
       </ul>
+
+      <br />
+
+      <button onClick={() => navigate("/family-trip")}>🚗 Create Family Trip</button>
+      <br /><br />
+      <button onClick={() => navigate("/public-trip")}>👥 Public Trip</button>
+      <br /><br />
+      <button onClick={() => navigate("/busfare-trip")}>🚌 Bus Fare</button>
+
     </div>
   );
 }
