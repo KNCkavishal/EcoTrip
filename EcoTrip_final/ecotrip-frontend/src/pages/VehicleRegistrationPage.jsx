@@ -174,7 +174,7 @@ export default function VehicleRegistrationPage() {
       <br /><br />
       <button onClick={() => navigate("/public-trip")}>👥 Public Trip</button>
       <br /><br />
-      <button onClick={() => navigate("/busfare-trip")}>🚌 Bus Fare</button>
+      
 
     </div>
   );
