@@ -17,6 +17,7 @@ public class VehicleServiceImpl implements VehicleService {
         this.vehicleRepository = vehicleRepository;
     }
 
+    @SuppressWarnings("null")
     @Override
     public Vehicle registerVehicle(VehicleRequest request, String userId) {
 

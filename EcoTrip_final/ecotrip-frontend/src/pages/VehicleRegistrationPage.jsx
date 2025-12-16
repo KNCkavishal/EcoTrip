@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
@@ -23,10 +23,9 @@ export default function VehicleRegistrationPage() {
   const API_URL = "http://localhost:8081/api/vehicles";
 
   useEffect(() => {
-    if (token) {
-      fetchVehicles();
-    }
-  }, []);
+  fetchVehicles();
+}, [fetchVehicles]);
+
 
   const handleChange = (e) => {
     setVehicle({
@@ -35,16 +34,19 @@ export default function VehicleRegistrationPage() {
     });
   };
 
-  const fetchVehicles = async () => {
-    try {
-      const res = await axios.get(`${API_URL}/myvehicles`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setVehicles(res.data);
-    } catch (err) {
-      console.error("Fetch vehicles error", err);
-    }
-  };
+  const fetchVehicles = useCallback(async () => {
+  try {
+    const res = await axios.get("http://localhost:8080/api/vehicles", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    setVehicles(res.data);
+  } catch (error) {
+    console.error("Error fetching vehicles", error);
+  }
+}, [token]);
+
 
   const handleRegister = async (e) => {
     e.preventDefault();
