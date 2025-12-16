@@ -42,6 +42,7 @@ public class AuthServiceImpl implements AuthService {
         this.passwordEncoder = passwordEncoder;
     }
 
+    @SuppressWarnings("null")
     @Override
     public String signup(SignupRequest request) {
         if (!StringUtils.hasText(request.getEmail()) || !EMAIL_REGEX.matcher(request.getEmail()).matches()) {
